@@ -425,7 +425,7 @@ function TOOL:Reload()
 end
 
 local toolMode = TOOL:GetMode()
-net.Receive( "MultiParent_Select", function ( len, ply )
+net.Receive( "MultiParent_Select", function ( _, ply )
 	if CLIENT then
 		local trace = LocalPlayer():GetEyeTrace()
 		net.Start("MultiParent_Select")
