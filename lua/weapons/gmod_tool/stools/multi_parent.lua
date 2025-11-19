@@ -158,7 +158,7 @@ local function sendNotification( selected, ply )
 	net.Send( ply )
 end
 
-function TOOL:LeftClick( trace )
+function TOOL:LeftClickInternal( trace )
 	local ent = trace.Entity
 
 	if ent:IsValid() and ent:IsPlayer() then return end
@@ -168,8 +168,6 @@ function TOOL:LeftClick( trace )
 	local inUse = ply:KeyDown( IN_USE )
 
 	if not inUse and ent:IsWorld() then return false end
-	if CLIENT then return true end
-
 	if inUse then -- Area select function
 		local SelectedProps = 0
 		local Radius = math.Clamp( self:GetClientNumber( "radius" ), 64, 1024 )
@@ -195,6 +193,21 @@ function TOOL:LeftClick( trace )
 		self:Deselect( ent )
 	else -- Select single entity
 		self:Select( ent )
+	end
+
+	return true
+end
+
+function TOOL:LeftClick( trace )
+	if CLIENT then return true end
+
+	-- Unparenting mode behavior
+	if self:GetStage() == 1 then
+		-- runs a trace on the client rather than the server so that it will reliably hit parented entities
+		net.Start("MultiParent_Select")
+		net.Send(self:GetOwner())
+	else
+		return self:LeftClickInternal( trace )
 	end
 
 	return true
@@ -410,6 +423,26 @@ function TOOL:Reload()
 
 	return true
 end
+
+local toolMode = TOOL:GetMode()
+net.Receive( "MultiParent_Select", function ( len, ply )
+	if CLIENT then
+		local trace = LocalPlayer():GetEyeTrace()
+		net.Start("MultiParent_Select")
+			net.WriteEntity( trace.Entity )
+			net.WriteVector( trace.HitPos )
+			net.WriteUInt( trace.PhysicsBone, MAX_EDICT_BITS )
+		net.SendToServer()
+	else
+		local fakeTrace = {}
+
+		fakeTrace.Entity = net.ReadEntity()
+		fakeTrace.HitPos = net.ReadVector()
+		fakeTrace.PhysicsBone = net.ReadUInt( MAX_EDICT_BITS )
+
+		ply:GetTool( toolMode ):LeftClickInternal( fakeTrace )
+	end
+end )
 
 if SERVER then return end
 

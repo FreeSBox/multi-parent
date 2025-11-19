@@ -3,6 +3,7 @@
 -- which returns a table of all props that are parented to it.
 ----------------------------------------------------------------------------
 
+util.AddNetworkString( "MultiParent_Select" )
 util.AddNetworkString( "MultiParent_SendNotification" )
 
 local meta = FindMetaTable( "Entity" )
